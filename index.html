@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Banquet Team</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="description" content="Personel shift, atama ve hakediş takibi">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Banquet Team">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+  /* ============================================================
+     AYAR: Apps Script web uygulamasının linki aşağıdaki APP_URL'de.
+     "Dağıt > Dağıtımları yönet > Düzenle > Yeni sürüm" ile güncellediğinizde link değişmez,
+     bu dosyayı tekrar yüklemeniz gerekmez.
+     ============================================================ */
+  :root{--gold:#d4af37;--gold2:#f0d77a;--mu:#a38a3e;--card:#1c1c1e}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:#000;color:var(--gold);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;-webkit-text-size-adjust:100%}
+  /* Uygulama: çentik / durum çubuğu alanı siyah kalır, içerik güvenli alanda */
+  #app{position:fixed;top:env(safe-area-inset-top);left:env(safe-area-inset-left);right:env(safe-area-inset-right);bottom:0;
+    width:calc(100% - env(safe-area-inset-left) - env(safe-area-inset-right));height:calc(100% - env(safe-area-inset-top));border:0;background:#1e1e20;opacity:0;transition:opacity .3s}
+  #app.hazir{opacity:1}
+  .ekran{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#000;z-index:5;padding:24px;text-align:center;transition:opacity .35s}
+  .ekran.gizli{opacity:0;pointer-events:none}
+  .logo.buyuk{width:200px;height:200px;border-radius:28px}.ust{letter-spacing:.18em;font-size:12px;margin-top:-6px}
+  .logo{width:96px;height:96px;border-radius:22px;box-shadow:0 0 0 1px rgba(212,175,55,.25),0 10px 40px rgba(212,175,55,.12)}
+  .ad{font-size:22px;font-weight:700;letter-spacing:.02em}
+  .alt{color:var(--mu);font-size:14px;max-width:320px;line-height:1.45}
+  .yukleniyor{width:120px;height:3px;background:#222;border-radius:3px;overflow:hidden;position:relative}
+  .yukleniyor::after{content:'';position:absolute;left:-40%;width:40%;height:100%;background:var(--gold);animation:k 1.1s ease-in-out infinite}
+  @keyframes k{to{left:100%}}
+  .btn{background:#000;color:var(--gold);border:1px solid var(--gold);border-radius:10px;padding:12px 22px;font:inherit;font-weight:600;cursor:pointer}
+  .btn:active{background:var(--gold);color:#000}
+  .gizle{display:none!important}
+  /* Yükleme önerisi */
+  #kur{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:6;background:var(--card);border:1px solid rgba(212,175,55,.45);
+    border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 10px 30px rgba(0,0,0,.6);transform:translateY(160%);transition:transform .3s}
+  #kur.goster{transform:none}
+  #kur img{width:40px;height:40px;border-radius:9px;flex:none}
+  #kur .m{flex:1;font-size:14px;line-height:1.35}#kur .m b{display:block;color:var(--gold2)}#kur .m span{color:var(--mu);font-size:13px}
+  #kur .x{background:none;border:0;color:var(--mu);font-size:22px;cursor:pointer;padding:4px}
+  .ios-paylas{display:inline-block;width:14px;height:16px;vertical-align:-2px;border:2px solid var(--gold2);border-top:0;border-radius:0 0 3px 3px;position:relative;margin:0 2px}
+  .ios-paylas::before{content:'';position:absolute;left:3px;top:-8px;width:2px;height:12px;background:var(--gold2)}
+</style>
+</head>
+<body>
+<iframe id="app" title="Banquet Team" allow="geolocation; clipboard-write; fullscreen"></iframe>
+
+<div id="acilis" class="ekran">
+  <img class="logo buyuk" src="logo.png" alt="Banquet Team">
+  <div class="alt ust">PERSONEL SHIFT TAKİP</div>
+  <div class="yukleniyor"></div>
+  <div class="alt" id="acilisMesaj"></div>
+  <button class="btn gizle" id="acilisTekrar" onclick="yukle()">Tekrar dene</button>
+</div>
+
+<div id="cevrimdisi" class="ekran gizli">
+  <img class="logo" src="logo.png" alt="Banquet Team">
+  <div class="ad">İnternet bağlantısı yok</div>
+  <div class="alt">Uygulamayı kullanmak için telefonunuzun internete bağlı olması gerekiyor. Bağlantı gelince otomatik açılır.</div>
+  <button class="btn" onclick="yukle()">Tekrar dene</button>
+</div>
+
+<div id="kur" role="dialog" aria-label="Uygulamayı yükle">
+  <img src="icon-192.png" alt="">
+  <div class="m" id="kurMetin"></div>
+  <button class="btn" id="kurBtn" style="padding:9px 14px">Yükle</button>
+  <button class="x" onclick="kurKapat()" aria-label="Kapat">×</button>
+</div>
+
+<script>
+const APP_URL = 'https://script.google.com/macros/s/AKfycbxjW7PR6BC0pC0QC-qk9Qv443jQPUDEHYI1isyBtVl8enfKpyf7AY1he4qNKaLsIyvC/exec';
+
+const $ = s => document.querySelector(s);
+const app = $('#app');
+let yuklendi = false, zaman = null;
+
+function ekran(id, goster) { $(id).classList.toggle('gizli', !goster); }
+
+function yukle() {
+  if (!navigator.onLine) { ekran('#cevrimdisi', true); return; }
+  ekran('#cevrimdisi', false); ekran('#acilis', true);
+  $('#acilisMesaj').textContent = ''; $('#acilisTekrar').classList.add('gizle');
+  yuklendi = false; app.classList.remove('hazir');
+  app.src = APP_URL + (APP_URL.indexOf('?') < 0 ? '?' : '&') + 'kaynak=uygulama';
+  clearTimeout(zaman);
+  zaman = setTimeout(() => {
+    if (yuklendi) return;
+    $('#acilisMesaj').textContent = 'Bağlantı yavaş görünüyor. Biraz daha bekleyebilir veya tekrar deneyebilirsiniz.';
+    $('#acilisTekrar').classList.remove('gizle');
+  }, 20000);
+}
+
+app.addEventListener('load', () => {
+  if (!app.src) return;
+  yuklendi = true; clearTimeout(zaman);
+  /* Google sayfası iframe içinde kendi yüklemesini yapar; kısa bir gecikmeyle açılış ekranını kaldır */
+  setTimeout(() => { app.classList.add('hazir'); ekran('#acilis', false); }, 900);
+});
+
+window.addEventListener('offline', () => ekran('#cevrimdisi', true));
+window.addEventListener('online', () => { if (!yuklendi) yukle(); else ekran('#cevrimdisi', false); });
+
+/* ---------- Ana ekrana ekleme önerisi ---------- */
+const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+let kurOlay = null;
+function kurGosterilsinMi() {
+  if (standalone) return false;
+  try { const t = +localStorage.getItem('kurKapatildi') || 0; return Date.now() - t > 7 * 864e5; } catch (e) { return true; }
+}
+function kurKapat() {
+  $('#kur').classList.remove('goster');
+  try { localStorage.setItem('kurKapatildi', String(Date.now())); } catch (e) {}
+}
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); kurOlay = e;
+  if (!kurGosterilsinMi()) return;
+  $('#kurMetin').innerHTML = '<b>Banquet Team\'i yükle</b><span>Telefonunuzda uygulama olarak açılsın</span>';
+  $('#kurBtn').classList.remove('gizle');
+  $('#kurBtn').onclick = async () => { kurOlay.prompt(); await kurOlay.userChoice; kurOlay = null; kurKapat(); };
+  setTimeout(() => $('#kur').classList.add('goster'), 2500);
+});
+window.addEventListener('appinstalled', kurKapat);
+if (ios && !standalone && kurGosterilsinMi()) {
+  $('#kurMetin').innerHTML = '<b>Ana ekrana ekleyin</b><span>Alttaki <i class="ios-paylas"></i> Paylaş simgesine, sonra "Ana Ekrana Ekle"ye dokunun</span>';
+  $('#kurBtn').classList.add('gizle');
+  setTimeout(() => $('#kur').classList.add('goster'), 2500);
+}
+
+/* ---------- Çevrimdışı açılış için önbellek ---------- */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+
+yukle();
+</script>
+</body>
+</html>
