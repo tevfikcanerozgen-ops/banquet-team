@@ -3,7 +3,7 @@
    internet yokken "bağlantı yok" ekranı gösterilebilir. Google'daki asıl uygulamaya ait
    istekler önbelleğe alınmaz, her zaman canlı veri gelir.
    Kabuk dosyalarını değiştirdiğinizde SURUM'u artırın. */
-const SURUM = 'banquet-team-v3';
+const SURUM = 'banquet-team-v4';
 const KABUK = [
   './', './index.html', './manifest.webmanifest',
   './icon-192.png', './icon-512.png', './icon-maskable-512.png',

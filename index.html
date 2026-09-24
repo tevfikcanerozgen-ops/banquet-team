@@ -104,6 +104,14 @@ app.addEventListener('load', () => {
   setTimeout(() => { app.classList.add('hazir'); ekran('#acilis', false); }, 900);
 });
 
+/* Uygulamadaki menü > Yenile: Google çerçevesini baştan yükle (yeni sürümler de böylece gelir) */
+window.addEventListener('message', e => {
+  if (e.data !== 'bt-yenile') return;
+  let h = ''; try { h = new URL(e.origin).hostname; } catch (x) { return; }
+  if (!/(^|\.)googleusercontent\.com$/.test(h) && !/(^|\.)google\.com$/.test(h)) return;
+  yukle();
+});
+
 window.addEventListener('offline', () => ekran('#cevrimdisi', true));
 window.addEventListener('online', () => { if (!yuklendi) yukle(); else ekran('#cevrimdisi', false); });
 
