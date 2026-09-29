@@ -149,31 +149,5 @@ if ('serviceWorker' in navigator) {
 
 yukle();
 </script>
-<script>
-  window.addEventListener('message', function(event) {
-    if (event.data === 'GET_CIHAZ_ID') {
-      let cId = null;
-      try { cId = localStorage.getItem('bt_cihaz_id'); } catch(e) {}
-      if (!cId) {
-        const match = document.cookie.match(/(^|;)\s*bt_cihaz_id\s*=\s*([^;]+)/);
-        if (match) cId = match[2];
-      }
-      if (!cId) {
-        cId = 'dev_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now();
-      }
-      try { localStorage.setItem('bt_cihaz_id', cId); } catch(e) {}
-      document.cookie = "bt_cihaz_id=" + cId + "; max-age=31536000; path=/";
-      
-      // Hem event.source hem de direkt iframe üzerinden mesaj göndererek Android ve iOS'ta garantile
-      if (event.source) {
-         event.source.postMessage({ type: 'CIHAZ_ID_RESULT', id: cId }, '*');
-      }
-      const appIframe = document.getElementById('app');
-      if (appIframe && appIframe.contentWindow) {
-         appIframe.contentWindow.postMessage({ type: 'CIHAZ_ID_RESULT', id: cId }, '*');
-      }
-    }
-  });
-</script>
 </body>
 </html>
