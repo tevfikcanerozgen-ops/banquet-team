@@ -89,11 +89,17 @@ function yukle() {
   $('#acilisMesaj').textContent = ''; $('#acilisTekrar').classList.add('gizle');
   yuklendi = false; app.classList.remove('hazir');
 
-  // --- APPLE ENGELİNİ AŞAN YENİ KISIM (Kimliği linke gizliyoruz) ---
+  // --- APPLE ENGELİNİ AŞAN VE CİHAZ TİPİNİ BULAN KISIM ---
   let cId = null;
   try { cId = localStorage.getItem('bt_cihaz_id'); } catch(e) {}
   if (!cId) {
-    cId = 'dev_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now();
+    // Cihazın iPhone mu Android mi olduğunu anla
+    const ua = navigator.userAgent.toLowerCase();
+    let pre = 'dev_';
+    if (/iphone|ipad|ipod/.test(ua)) pre = 'ios_';
+    else if (/android/.test(ua)) pre = 'and_';
+    
+    cId = pre + Math.random().toString(36).substring(2, 10) + '_' + Date.now();
     try { localStorage.setItem('bt_cihaz_id', cId); } catch(e) {}
   }
   // Google'ı çağırırken cihaz kimliğini (cId) linkin sonuna ekle:
