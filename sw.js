@@ -40,7 +40,7 @@ self.addEventListener('notificationclick', e => {
 });
 
 /* ---- Önbellek ---- */
-const SURUM = 'banquet-team-v8';
+const SURUM = 'banquet-team-v9';
 const KABUK = [
   './', './index.html', './manifest.webmanifest',
   './icon-192.png', './icon-512.png', './icon-maskable-512.png',
@@ -63,13 +63,21 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return; // Google istekleri: dokunma
 
-  // Önce önbellek, arkada güncelle (stale-while-revalidate)
-  e.respondWith(caches.open(SURUM).then(async cache => {
-    const kayit = await cache.match(req, { ignoreSearch: req.mode === 'navigate' });
-    const ag = fetch(req).then(res => {
-      if (res && res.ok) cache.put(req.mode === 'navigate' ? './index.html' : req, res.clone());
+  // Sayfa (index.html): önce internet — güncellemeler ilk açılışta gelir; internet yoksa önbellek
+  if (req.mode === 'navigate') {
+    e.respondWith(fetch(req).then(res => {
+      if (res && res.ok) { const k = res.clone(); caches.open(SURUM).then(c => c.put('./index.html', k)); }
       return res;
-    }).catch(() => kayit || cache.match('./index.html'));
+    }).catch(() => caches.match('./index.html', { cacheName: SURUM })));
+    return;
+  }
+  // Diğer dosyalar (ikonlar vb.): önce önbellek, arkada güncelle
+  e.respondWith(caches.open(SURUM).then(async cache => {
+    const kayit = await cache.match(req);
+    const ag = fetch(req).then(res => {
+      if (res && res.ok) cache.put(req, res.clone());
+      return res;
+    }).catch(() => kayit);
     return kayit || ag;
   }));
 });
