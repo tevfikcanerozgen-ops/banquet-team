@@ -166,5 +166,56 @@ if ('serviceWorker' in navigator) {
 
 yukle();
 </script>
-</body>
-</html>
+
+<!-- ========== TELEFON BİLDİRİMLERİ (Firebase) ========== -->
+<div id="btBildirim" hidden>
+  <div class="btb-ikon">🔔</div>
+  <div class="btb-metin"><b>Bildirimleri açın</b><span>Shift ve atama değişikliklerinden anında haberdar olun</span></div>
+  <button id="btbAc">Aç</button>
+  <button id="btbKapat" aria-label="Kapat">✕</button>
+</div>
+<style>
+  #btBildirim{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:9999;
+    display:flex;align-items:center;gap:10px;padding:12px 12px 12px 14px;border-radius:14px;
+    background:var(--card);border:1px solid rgba(212,175,55,.45);color:var(--gold2);font:14px/1.35 system-ui,-apple-system,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.6)}
+  #btBildirim[hidden]{display:none}
+  .btb-ikon{font-size:22px}
+  .btb-metin{flex:1;display:flex;flex-direction:column}
+  .btb-metin span{color:var(--mu);font-size:13px}
+  #btbAc{background:var(--gold);color:#000;border:0;border-radius:10px;padding:8px 14px;font-weight:600}
+  #btbKapat{background:none;border:0;color:var(--mu);font-size:20px;padding:4px}
+</style>
+
+<script>
+/* Bildirime dokunarak açıldıysa (?sayfa=...) ilgili sayfayı uygulamaya iletir, sonra adres çubuğunu temizler */
+(function () {
+  try {
+    const s = new URLSearchParams(location.search).get('sayfa');
+    if (!s || !app.src) return;
+    app.src = app.src + '&sayfa=' + encodeURIComponent(s);
+    history.replaceState(null, '', location.pathname);
+  } catch (e) {}
+})();
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+<script>
+(function () {
+  const VAPID_KEY = 'BAu8i02of6D6Xtvd6kreKoEKQ0R0Gbs-jcZ0je0lzqjqIZbFIeZL0iC4vqj8TEbWqG8ZLtuHaAjh5xXD7QyVyQo';
+  const destek = 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
+  if (!destek || !window.firebase) return; // iOS'ta yalnızca ana ekrandan açılınca (iOS 16.4+) desteklenir
+
+  firebase.initializeApp({
+    apiKey: 'AIzaSyDPnicGdGn7WhXjswl8av-kXqQi7XP-_ho',
+    projectId: 'banquet-team-57e79',
+    messagingSenderId: '375529452283',
+    appId: '1:375529452283:web:4dda255e152cf89caff65e'
+  });
+  const messaging = firebase.messaging();
+  const kutu = document.getElementById('btBildirim');
+  const ls = {
+    al: k => { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    yaz: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} }
+  };
+  const platform = /iphone|ipad|ipod/i.test(navigator.userAgent) ? 'ios' : /android/i.test(navigator.userAgent) ? 'android' : 'diger';
+  const anaEkran = window.matchMedia('(display-mode:
