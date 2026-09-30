@@ -218,4 +218,56 @@ yukle();
     yaz: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} }
   };
   const platform = /iphone|ipad|ipod/i.test(navigator.userAgent) ? 'ios' : /android/i.test(navigator.userAgent) ? 'android' : 'diger';
-  const anaEkran = window.matchMedia('(display-mode:
+  const anaEkran = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+
+  /* Uygulama (Apps Script çerçevesi) token'ı ister; giriş yapan kullanıcıyla birlikte sunucuya o kaydeder */
+  let TOKEN_ = null, ISTEYEN = null;
+  function gonder() {
+    if (!ISTEYEN) return;
+    try { ISTEYEN.src.postMessage({ tip: 'bt-push', token: TOKEN_ || '', platform: platform, izin: Notification.permission }, ISTEYEN.origin); } catch (e) {}
+  }
+  window.addEventListener('message', e => {
+    if (!e.data || e.data.tip !== 'bt-push-iste') return;
+    let h = ''; try { h = new URL(e.origin).hostname; } catch (x) { return; }
+    if (!/(^|\.)googleusercontent\.com$/.test(h) && !/(^|\.)google\.com$/.test(h)) return;
+    ISTEYEN = { src: e.source, origin: e.origin };
+    gonder();
+  });
+  async function tokenKaydet() {
+    const reg = await navigator.serviceWorker.ready;
+    TOKEN_ = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
+    gonder();
+  }
+
+  // Uygulama açıkken gelen bildirimi de göster (yoksa açıkken sessiz kalır).
+  messaging.onMessage(async p => {
+    const n = p.notification || {}, d = p.data || {};
+    const reg = await navigator.serviceWorker.ready;
+    reg.showNotification(n.title || d.baslik || 'Banquet Team', {
+      body: n.body || d.mesaj || '', icon: 'icon-192.png',
+      data: { link: (p.fcmOptions && p.fcmOptions.link) || d.link || './' }
+    });
+  });
+
+  if (Notification.permission === 'granted') {
+    tokenKaydet().catch(console.warn);
+  } else if (Notification.permission === 'default' && anaEkran) {
+    if (Date.now() - (+ls.al('bt_bildirim_kapatildi') || 0) > 3 * 864e5) {
+      setTimeout(() => { kutu.hidden = false; }, 4000);
+    }
+  }
+
+  document.getElementById('btbKapat').onclick = () => {
+    kutu.hidden = true; ls.yaz('bt_bildirim_kapatildi', String(Date.now()));
+  };
+  // İzin isteği mutlaka kullanıcının dokunmasıyla tetiklenmeli (iOS şartı).
+  document.getElementById('btbAc').onclick = async () => {
+    kutu.hidden = true;
+    const izin = await Notification.requestPermission();
+    if (izin === 'granted') tokenKaydet().catch(console.warn);
+    else ls.yaz('bt_bildirim_kapatildi', String(Date.now()));
+  };
+})();
+</script>
+</body>
+</html>
