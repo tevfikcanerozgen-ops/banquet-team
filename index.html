@@ -187,6 +187,14 @@ yukle();
 </style>
 
 <script>
+/* Uygulama (Apps Script çerçevesi) kalıcı cihaz kimliğini ister — iPhone'da çerçevenin kendi hafızası silinebiliyor */
+window.addEventListener('message', function (e) {
+  if (!e.data || e.data.tip !== 'bt-cihaz-iste') return;
+  var h = ''; try { h = new URL(e.origin).hostname; } catch (x) { return; }
+  if (!/(^|\.)googleusercontent\.com$/.test(h) && !/(^|\.)google\.com$/.test(h)) return;
+  var c = null; try { c = localStorage.getItem('bt_cihaz_id'); } catch (x) {}
+  try { e.source.postMessage({ tip: 'bt-cihaz', cId: c }, e.origin); } catch (x) {}
+});
 /* Bildirime dokunarak açıldıysa (?sayfa=...) ilgili sayfayı uygulamaya iletir, sonra adres çubuğunu temizler */
 (function () {
   try {
