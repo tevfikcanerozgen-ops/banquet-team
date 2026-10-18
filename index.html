@@ -168,6 +168,17 @@ yukle();
 </script>
 
 <!-- ========== TELEFON BİLDİRİMLERİ (Firebase) ========== -->
+<div id="btRehber" hidden><div class="btr-kutu"><b>📇 Telefon rehberi</b><span>Numarasını almak istediğiniz kişiyi rehberden seçin</span>
+  <div class="btr-btn"><button id="btrKapat">Vazgeç</button><button id="btrAc">Rehberi aç</button></div></div></div>
+<style>
+  #btRehber{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+  #btRehber[hidden]{display:none}
+  .btr-kutu{width:100%;max-width:420px;background:var(--card);border:1px solid rgba(212,175,55,.45);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:6px;color:var(--gold2);font:15px/1.4 system-ui,-apple-system,sans-serif}
+  .btr-kutu span{color:var(--mu);font-size:13px}
+  .btr-btn{display:flex;gap:10px;justify-content:flex-end;margin-top:10px}
+  .btr-btn button{border-radius:10px;padding:10px 16px;font:inherit;font-weight:600;border:1px solid var(--gold);background:#000;color:var(--gold)}
+  #btrAc{background:var(--gold);color:#000}
+</style>
 <div id="btBildirim" hidden>
   <div class="btb-ikon">🔔</div>
   <div class="btb-metin"><b>Bildirimleri açın</b><span>Shift ve atama değişikliklerinden anında haberdar olun</span></div>
@@ -195,19 +206,26 @@ window.addEventListener('message', function (e) {
   var c = null; try { c = localStorage.getItem('bt_cihaz_id'); } catch (x) {}
   try { e.source.postMessage({ tip: 'bt-cihaz', cId: c }, e.origin); } catch (x) {}
 });
-/* Uygulama telefon rehberinden numara ister — rehber (Contact Picker) çerçeve içinde açılamaz, burada (üst sayfada) açılır */
+/* Uygulama telefon rehberinden numara ister — rehber (Contact Picker) çerçeve içinde açılamaz.
+   Üst sayfada küçük bir pencere çıkar; kullanıcı "Rehberi aç"a burada dokunur (tarayıcı rehberi yalnız doğrudan dokunuşla açar). */
+var REHBER_ISTEK = null;
+function rehberCevap(o) { var r = REHBER_ISTEK; REHBER_ISTEK = null; var k = document.getElementById('btRehber'); if (k) k.hidden = true; if (!r) return; try { r.src.postMessage(Object.assign({ tip: 'bt-rehber' }, o), r.origin); } catch (x) {} }
 window.addEventListener('message', function (e) {
   if (!e.data || e.data.tip !== 'bt-rehber-iste') return;
   var h = ''; try { h = new URL(e.origin).hostname; } catch (x) { return; }
   if (!/(^|\.)googleusercontent\.com$/.test(h) && !/(^|\.)google\.com$/.test(h)) return;
-  var cevap = function (o) { try { e.source.postMessage(Object.assign({ tip: 'bt-rehber' }, o), e.origin); } catch (x) {} };
-  if (!(navigator.contacts && navigator.contacts.select)) { cevap({ hata: 'desteklenmiyor' }); return; }
+  REHBER_ISTEK = { src: e.source, origin: e.origin };
+  if (!(navigator.contacts && navigator.contacts.select)) { rehberCevap({ hata: 'desteklenmiyor' }); return; }
+  document.getElementById('btRehber').hidden = false;
+});
+document.getElementById('btrAc').onclick = function () {
   navigator.contacts.select(['name', 'tel'], { multiple: false }).then(function (l) {
     var k = l && l[0];
-    if (!k) { cevap({ iptal: true }); return; }
-    cevap({ tel: (k.tel || []).filter(Boolean), ad: (k.name || []).filter(Boolean)[0] || '' });
-  }).catch(function (x) { cevap({ hata: String((x && x.message) || x) }); });
-});
+    if (!k) { rehberCevap({ iptal: true }); return; }
+    rehberCevap({ tel: (k.tel || []).filter(Boolean), ad: (k.name || []).filter(Boolean)[0] || '' });
+  }).catch(function (x) { rehberCevap({ hata: String((x && x.message) || x) }); });
+};
+document.getElementById('btrKapat').onclick = function () { rehberCevap({ iptal: true }); };
 /* Bildirime dokunarak açıldıysa (?sayfa=...) ilgili sayfayı uygulamaya iletir, sonra adres çubuğunu temizler */
 (function () {
   try {
