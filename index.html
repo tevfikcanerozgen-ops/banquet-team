@@ -168,7 +168,7 @@ yukle();
 </script>
 
 <!-- ========== TELEFON BİLDİRİMLERİ (Firebase) ========== -->
-<div id="btRehber" hidden><div class="btr-kutu"><b>📇 Telefon rehberi</b><span>Numarasını almak istediğiniz kişiyi rehberden seçin</span>
+<div id="btRehber" hidden><div class="btr-kutu"><b id="btrBaslik">📇 Telefon rehberi</b><span id="btrMetin">Numarasını almak istediğiniz kişiyi rehberden seçin</span>
   <div class="btr-btn"><button id="btrKapat">Vazgeç</button><button id="btrAc">Rehberi aç</button></div></div></div>
 <style>
   #btRehber{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
@@ -209,16 +209,30 @@ window.addEventListener('message', function (e) {
 /* Uygulama telefon rehberinden numara ister — rehber (Contact Picker) çerçeve içinde açılamaz.
    Üst sayfada küçük bir pencere çıkar; kullanıcı "Rehberi aç"a burada dokunur (tarayıcı rehberi yalnız doğrudan dokunuşla açar). */
 var REHBER_ISTEK = null;
-function rehberCevap(o) { var r = REHBER_ISTEK; REHBER_ISTEK = null; var k = document.getElementById('btRehber'); if (k) k.hidden = true; if (!r) return; try { r.src.postMessage(Object.assign({ tip: 'bt-rehber' }, o), r.origin); } catch (x) {} }
+function rehberCevap(o) { var r = REHBER_ISTEK; REHBER_ISTEK = null; var k = document.getElementById('btRehber'); if (k) k.hidden = true; if (!r) return; try { r.src.postMessage(Object.assign({ tip: r.tip || 'bt-rehber' }, o), r.origin); } catch (x) {} }
+function rehberPencere(baslik, metin, buton) { document.getElementById('btrBaslik').textContent = baslik; document.getElementById('btrMetin').textContent = metin; document.getElementById('btrAc').textContent = buton; document.getElementById('btRehber').hidden = false; }
+/* iPhone: rehber seçici yok; Kişiler'den kopyalanan numara burada panodan okunur (pano çerçeve içinde okunamaz) */
+window.addEventListener('message', function (e) {
+  if (!e.data || e.data.tip !== 'bt-pano-iste') return;
+  var h = ''; try { h = new URL(e.origin).hostname; } catch (x) { return; }
+  if (!/(^|\.)googleusercontent\.com$/.test(h) && !/(^|\.)google\.com$/.test(h)) return;
+  REHBER_ISTEK = { src: e.source, origin: e.origin, tip: 'bt-pano' };
+  if (!(navigator.clipboard && navigator.clipboard.readText)) { rehberCevap({ hata: 'desteklenmiyor' }); return; }
+  rehberPencere('📋 Numarayı yapıştır', 'Kişiler uygulamasında kopyaladığınız numarayı yapıştırın', 'Yapıştır');
+});
 window.addEventListener('message', function (e) {
   if (!e.data || e.data.tip !== 'bt-rehber-iste') return;
   var h = ''; try { h = new URL(e.origin).hostname; } catch (x) { return; }
   if (!/(^|\.)googleusercontent\.com$/.test(h) && !/(^|\.)google\.com$/.test(h)) return;
-  REHBER_ISTEK = { src: e.source, origin: e.origin };
+  REHBER_ISTEK = { src: e.source, origin: e.origin, tip: 'bt-rehber' };
   if (!(navigator.contacts && navigator.contacts.select)) { rehberCevap({ hata: 'desteklenmiyor' }); return; }
-  document.getElementById('btRehber').hidden = false;
+  rehberPencere('📇 Telefon rehberi', 'Numarasını almak istediğiniz kişiyi rehberden seçin', 'Rehberi aç');
 });
 document.getElementById('btrAc').onclick = function () {
+  if (REHBER_ISTEK && REHBER_ISTEK.tip === 'bt-pano') {
+    navigator.clipboard.readText().then(function (t) { rehberCevap({ metin: String(t || '') }); }).catch(function (x) { rehberCevap({ hata: String((x && x.message) || x) }); });
+    return;
+  }
   navigator.contacts.select(['name', 'tel'], { multiple: false }).then(function (l) {
     var k = l && l[0];
     if (!k) { rehberCevap({ iptal: true }); return; }
