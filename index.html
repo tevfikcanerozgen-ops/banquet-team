@@ -228,7 +228,20 @@ window.addEventListener('message', function (e) {
   if (!(navigator.contacts && navigator.contacts.select)) { rehberCevap({ hata: 'desteklenmiyor' }); return; }
   rehberPencere('📇 Telefon rehberi', 'Numarasını almak istediğiniz kişiyi rehberden seçin', 'Rehberi aç');
 });
+/* iPhone: "Rehberden Numara" kestirmesi (Kestirmeler uygulaması) kişi seçtirip numarayı panoya kopyalar */
+window.addEventListener('message', function (e) {
+  if (!e.data || e.data.tip !== 'bt-kestirme-iste') return;
+  var h = ''; try { h = new URL(e.origin).hostname; } catch (x) { return; }
+  if (!/(^|\.)googleusercontent\.com$/.test(h) && !/(^|\.)google\.com$/.test(h)) return;
+  REHBER_ISTEK = { src: e.source, origin: e.origin, tip: 'bt-kestirme' };
+  rehberPencere('📇 Rehberden seç', 'Kestirme açılır, kişiyi seçin; numara kopyalanır. Sonra uygulamaya dönüp 📋 tuşuna basın.', 'Kestirmeyi aç');
+});
 document.getElementById('btrAc').onclick = function () {
+  if (REHBER_ISTEK && REHBER_ISTEK.tip === 'bt-kestirme') {
+    rehberCevap({ acildi: true });
+    location.href = 'shortcuts://run-shortcut?name=' + encodeURIComponent('Rehberden Numara');
+    return;
+  }
   if (REHBER_ISTEK && REHBER_ISTEK.tip === 'bt-pano') {
     navigator.clipboard.readText().then(function (t) { rehberCevap({ metin: String(t || '') }); }).catch(function (x) { rehberCevap({ hata: String((x && x.message) || x) }); });
     return;
