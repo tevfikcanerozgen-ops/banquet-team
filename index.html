@@ -269,7 +269,18 @@ document.getElementById('btrKapat').onclick = function () { rehberCevap({ iptal:
 (function () {
   const VAPID_KEY = 'BAu8i02of6D6Xtvd6kreKoEKQ0R0Gbs-jcZ0je0lzqjqIZbFIeZL0iC4vqj8TEbWqG8ZLtuHaAjh5xXD7QyVyQo';
   const destek = 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
-  if (!destek || !window.firebase) return; // iOS'ta yalnızca ana ekrandan açılınca (iOS 16.4+) desteklenir
+  const platform0 = /iphone|ipad|ipod/i.test(navigator.userAgent) ? 'ios' : /android/i.test(navigator.userAgent) ? 'android' : 'diger';
+  const anaEkran0 = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  if (!destek || !window.firebase) {
+    // Bildirim desteklenmiyor (ör. iPhone'da Safari'den açılmış): uygulama "ana ekrana ekleyin" görevini gösterebilsin diye durum bildirilir
+    window.addEventListener('message', e => {
+      if (!e.data || e.data.tip !== 'bt-push-iste') return;
+      let h = ''; try { h = new URL(e.origin).hostname; } catch (x) { return; }
+      if (!/(^|\.)googleusercontent\.com$/.test(h) && !/(^|\.)google\.com$/.test(h)) return;
+      try { e.source.postMessage({ tip: 'bt-push', token: '', platform: platform0, izin: 'desteklenmiyor', anaEkran: anaEkran0 }, e.origin); } catch (x) {}
+    });
+    return; // iOS'ta yalnızca ana ekrandan açılınca (iOS 16.4+) desteklenir
+  }
 
   firebase.initializeApp({
     apiKey: 'AIzaSyDPnicGdGn7WhXjswl8av-kXqQi7XP-_ho',
@@ -290,13 +301,18 @@ document.getElementById('btrKapat').onclick = function () { rehberCevap({ iptal:
   let TOKEN_ = null, ISTEYEN = null;
   function gonder() {
     if (!ISTEYEN) return;
-    try { ISTEYEN.src.postMessage({ tip: 'bt-push', token: TOKEN_ || '', platform: platform, izin: Notification.permission }, ISTEYEN.origin); } catch (e) {}
+    try { ISTEYEN.src.postMessage({ tip: 'bt-push', token: TOKEN_ || '', platform: platform, izin: Notification.permission, anaEkran: anaEkran }, ISTEYEN.origin); } catch (e) {}
   }
   window.addEventListener('message', e => {
-    if (!e.data || e.data.tip !== 'bt-push-iste') return;
+    if (!e.data || (e.data.tip !== 'bt-push-iste' && e.data.tip !== 'bt-bildirim-ac')) return;
     let h = ''; try { h = new URL(e.origin).hostname; } catch (x) { return; }
     if (!/(^|\.)googleusercontent\.com$/.test(h) && !/(^|\.)google\.com$/.test(h)) return;
     ISTEYEN = { src: e.source, origin: e.origin };
+    if (e.data.tip === 'bt-bildirim-ac') {   // uygulamadaki "Bildirimleri aç" görevi: izin kutusu (kapatılmış olsa da) yeniden gösterilir
+      if (Notification.permission === 'default') kutu.hidden = false;
+      else if (Notification.permission === 'granted') tokenKaydet().catch(console.warn);
+      return;
+    }
     gonder();
   });
   async function tokenKaydet() {
